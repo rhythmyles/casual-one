@@ -16,14 +16,17 @@
         <version>2.6.1</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
+
     <groupId>ltd.lant</groupId>
     <artifactId>casual-one</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>casual-one</name>
     <description>A simple project for learning</description>
+
     <properties>
         <java.version>1.8</java.version>
     </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
