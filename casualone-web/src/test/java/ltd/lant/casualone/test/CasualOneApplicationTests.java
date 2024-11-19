@@ -1,15 +1,14 @@
 package ltd.lant.casualone.test;
 
-import org.apache.commons.lang3.StringUtils;
+import com.github.benmanes.caffeine.cache.AsyncCache;
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import org.apache.commons.lang3.ObjectUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.lang.reflect.Field;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.StampedLock;
@@ -61,6 +60,11 @@ class CasualOneApplicationTests {
 
     @Test
     void optionalTest() {
+
+        String s = "00003";
+        int i = Integer.parseInt(s);
+        System.err.println(i);
+
         User zhangsan = new User("zhangsan", 18);
         User lisi = null;
         User wangwu = new User("wangwu", 81);
@@ -70,20 +74,24 @@ class CasualOneApplicationTests {
         Optional<User> optUser1 = Optional.of(user);
         User user2 = optUser1.get();
 
-        Optional.ofNullable(user1).ifPresent(p -> System.out.println("年龄"+p.getAge()));
+        Optional.ofNullable(user1).ifPresent(p -> System.out.println("年龄" + p.getAge()));
 
     }
 
     @Test
-    void assertTest() {
-        try {
-            User user = null;
-            //     user = new User("zhaoliu", 80);
-            assert user != null;
-            System.out.println(user.getName());
-        } catch (Exception | Error e) {
-            System.err.println("Exception | Error");
-        }
+    void intTest() throws NoSuchFieldException, IllegalAccessException {
+
+        Class cache = Integer.class.getDeclaredClasses()[0]; //1
+        Field myCache = cache.getDeclaredField("cache"); //2
+        myCache.setAccessible(true);//3
+
+        Integer[] newCache = (Integer[]) myCache.get(cache); //4
+        newCache[132] = newCache[133]; //5
+
+        int a = 2;
+        int b = a + a;
+        System.out.printf("%d + %d = %d", a, a, b); //
+
     }
 
     @Test
@@ -131,57 +139,100 @@ class CasualOneApplicationTests {
         System.out.print(t);
     }
 
-    @Test
-    void dateTest() {
 
-        Date date1 = new Date(0L); // 0时区的0点,东8区的8点
-        Date date2 = new Date(3600 * 1000L); //0时区的1点,东8区的9点
-        Date date3 = new Date(7200L * 1000); //0时区的3点,东8区的11点
-
-        Date date4 = new Date(date1.getTime() + date2.getTime());
-        Date date5 = new Date(date1.getTime() + date2.getTime() + date3.getTime());
-        System.out.println(date4);
-        System.out.println(date5);
-    }
 
     @Test
-    void integerTest() throws NoSuchFieldException, IllegalAccessException {
-        Class cache = Integer.class.getDeclaredClasses()[0];
-        Field myCache = cache.getDeclaredField("cache");
-        myCache.setAccessible(true);
+    void caffeineTest() throws InterruptedException {
+        Cache<Integer, String> cache = Caffeine.newBuilder().maximumSize(10).evictionListener((k, v, f) -> {
+            System.err.println("淘汰的k，v = " + k + "," + v);
+        }).build();
+        cache.put(1,"234");
+        String v1 = cache.getIfPresent(1);
+        System.err.println(v1);
+        String v2 = cache.getIfPresent(2);
+        System.err.println(v2);
+        String v3 = cache.get(2, v -> "345");
+        System.err.println(v3);
 
-        Integer[] newCache = (Integer[]) myCache.get(cache);
-        newCache[132] = newCache[138];
-        int a = 2;
-        int b = a + a;
-        System.out.printf("%d + %d = %d", a, a, b);
+
+        AsyncCache<Object, Object> asyncCache = Caffeine.newBuilder().maximumSize(10)
+                .evictionListener((k, v, f) -> System.err.println("淘汰的k，v = " + k + "," + v))
+                .expireAfterAccess(1, TimeUnit.SECONDS)
+                .buildAsync();
+
+        AsyncLoadingCache<Object, String> asyncLoadingCache = Caffeine.newBuilder().maximumSize(10)
+                .evictionListener((k, v, f) -> System.err.println("淘汰的k，v = " + k + "," + v))
+                .refreshAfterWrite(1, TimeUnit.SECONDS).expireAfterAccess(1, TimeUnit.SECONDS)
+                .buildAsync(k -> k + "new");
+
+//        for (int i = 0; i < 20; i++) {
+//            cache.put(i, i);
+//            asyncCache.put(i,new CompletableFuture<>());
+//            asyncLoadingCache.put(i,new CompletableFuture<>());
+//        }
+//
+//        Thread.sleep(1000);
+//
+//        System.err.println(cache.asMap());
+
     }
 
 
 
-    class User {
+
+
+
+
+
+
+
+
+
+
+
+
+
+    class User implements Comparable<User> {
         public User(int age) {
             this.age = age;
         }
+
         public User(String name, int age) {
             this.name = name;
             this.age = age;
         }
+
         private String name;
         private int age;
+
         public int getAge() {
             return age;
         }
+
         public void setAge(int age) {
             this.age = age;
         }
+
         public String getName() {
             return name;
         }
+
         public void setName(String name) {
             this.name = name;
         }
-    }
 
+        @Override
+        public int compareTo(User o) {
+            return this.getAge() - o.getAge();
+        }
+
+        @Override
+        public String toString() {
+            return "User{" +
+                    "name='" + name + '\'' +
+                    ", age=" + age +
+                    '}';
+        }
+    }
 
 }

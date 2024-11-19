@@ -1,1 +1,17 @@
+server:
+  port: 13009
+  servlet:
+    context-path: /ezcode
+spring:
+  application:
+    name: casual-one
+  servlet:
+    multipart:
+      max-file-size: 1000MB
+      max-request-size: 1050MB
 
+  redis:
+    database: 0
+    host: 61.171.89.234
+    port: 26379
+    password: qiyun@2023
